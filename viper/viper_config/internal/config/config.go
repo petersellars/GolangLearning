@@ -1,6 +1,9 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"github.com/globalsign/mgo"
+	"github.com/spf13/viper"
+)
 
 type Constants struct {
 	PORT  string
@@ -8,6 +11,11 @@ type Constants struct {
 		URL    string
 		DBName string
 	}
+}
+
+type Config struct {
+	Constants
+	Database *mgo.Database
 }
 
 func initViper() (Constants, error) {
@@ -22,4 +30,20 @@ func initViper() (Constants, error) {
 	var constants Constants
 	err = viper.Unmarshal(&constants)
 	return constants, err
+}
+
+// New is used to generate a configuration instance which will be passed around the codebase
+func New() (*Config, error) {
+	config := Config{}
+	constants, err := initViper()
+	config.Constants = constants
+	if err != nil {
+		return &config, err
+	}
+	dbsession, err := mgo.Dial(config.Constants.Mongo.URL)
+	if err != nil {
+		return &config, err
+	}
+	config.Database = dbsession.DB(config.Constants.Mongo.DBName)
+	return &config, err
 }
